@@ -1,40 +1,92 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import "./App.css";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { InputSelect } from "./components/InputSelect"
+import { Instructions } from "./components/Instructions"
+import { Transactions } from "./components/Transactions"
+import { useEmployees } from "./hooks/useEmployees"
+import { usePaginatedTransactions } from "./hooks/usePaginatedTransactions"
+import { useTransactionsByEmployee } from "./hooks/useTransactionsByEmployee"
+import { EMPTY_EMPLOYEE } from "./utils/constants"
+import { Employee } from "./utils/types"
 
-function App() {
-  const [count, setCount] = useState(0);
+export function App() {
+  const { data: employees, ...employeeUtils } = useEmployees()
+  const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
+  const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const transactions = useMemo(
+    () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
+    [paginatedTransactions, transactionsByEmployee]
+  )
+
+  const loadAllTransactions = useCallback(async () => {
+    setIsLoading(true)
+    transactionsByEmployeeUtils.invalidateData()
+
+    await employeeUtils.fetchAll()
+    await paginatedTransactionsUtils.fetchAll()
+
+    setIsLoading(false)
+  }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
+
+  const loadTransactionsByEmployee = useCallback(
+    async (employeeId: string) => {
+      paginatedTransactionsUtils.invalidateData()
+      await transactionsByEmployeeUtils.fetchById(employeeId)
+    },
+    [paginatedTransactionsUtils, transactionsByEmployeeUtils]
+  )
+
+  useEffect(() => {
+    if (employees === null && !employeeUtils.loading) {
+      loadAllTransactions()
+    }
+  }, [employeeUtils.loading, employees, loadAllTransactions])
 
   return (
-    <div className="App">
-      <div>
-        <a href="https://reactjs.org" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-        <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-      </div>
-      <h1>React + Vite</h1>
-      <h2>On CodeSandbox!</h2>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR.
-        </p>
+    <Fragment>
+      <main className="MainContainer">
+        <Instructions />
 
-        <p>
-          Tip: you can use the inspector button next to address bar to click on
-          components in the preview and open the code in the editor!
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </div>
-  );
+        <hr className="RampBreak--l" />
+
+        <InputSelect<Employee>
+          isLoading={isLoading}
+          defaultValue={EMPTY_EMPLOYEE}
+          items={employees === null ? [] : [EMPTY_EMPLOYEE, ...employees]}
+          label="Filter by employee"
+          loadingLabel="Loading employees"
+          parseItem={(item) => ({
+            value: item.id,
+            label: `${item.firstName} ${item.lastName}`,
+          })}
+          onChange={async (newValue) => {
+            if (newValue === null) {
+              return
+            }
+
+            await loadTransactionsByEmployee(newValue.id)
+          }}
+        />
+
+        <div className="RampBreak--l" />
+
+        <div className="RampGrid">
+          <Transactions transactions={transactions} />
+
+          {transactions !== null && (
+            <button
+              className="RampButton"
+              disabled={paginatedTransactionsUtils.loading}
+              onClick={async () => {
+                await loadAllTransactions()
+              }}
+            >
+              View More
+            </button>
+          )}
+        </div>
+      </main>
+    </Fragment>
+  )
 }
-
-export default App;
