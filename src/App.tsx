@@ -29,6 +29,13 @@ export function App() {
     setIsLoading(false)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
+  // Bug 3 changes
+  const resetEmployeeFilter = useCallback(async () => {
+    setIsLoading(true)
+    await loadAllTransactions()
+    setIsLoading(false)
+  }, [loadAllTransactions])
+
   const loadTransactionsByEmployee = useCallback(
     async (employeeId: string) => {
       paginatedTransactionsUtils.invalidateData()
@@ -60,12 +67,19 @@ export function App() {
             value: item.id,
             label: `${item.firstName} ${item.lastName}`,
           })}
+          // Bug 3 changes
           onChange={async (newValue) => {
             if (newValue === null) {
               return
             }
 
-            await loadTransactionsByEmployee(newValue.id)
+            if (newValue.id === EMPTY_EMPLOYEE.id) {
+              // Reset the filter to load all transactions
+              await resetEmployeeFilter()
+            } else {
+              // Load transactions by the selected employee
+              await loadTransactionsByEmployee(newValue.id)
+            }
           }}
         />
 

@@ -39,7 +39,7 @@ export function fakeFetch<TData, TParams extends object = object>(
           setTimeout(() => {
             mockApiLogger({ data: { endpoint, params, result } })
             resolve(result)
-          }, mockTimeout * 2.5)
+          }, mockTimeout * 0)
           break
 
         case "transactionsByEmployee":
@@ -48,7 +48,7 @@ export function fakeFetch<TData, TParams extends object = object>(
           setTimeout(() => {
             mockApiLogger({ data: { endpoint, params, result } })
             resolve(result)
-          }, mockTimeout * 1.5)
+          }, mockTimeout * 0)
           break
 
         case "setTransactionApproval":
@@ -57,7 +57,7 @@ export function fakeFetch<TData, TParams extends object = object>(
           setTimeout(() => {
             mockApiLogger({ data: { endpoint, params, result } })
             resolve(result)
-          }, mockTimeout * 1)
+          }, mockTimeout * 0)
           break
 
         default:
